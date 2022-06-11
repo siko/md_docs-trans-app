@@ -1,43 +1,56 @@
 from pathlib import Path
+import shutil
 from typing import TYPE_CHECKING, Iterable
-
-from md_translate.exceptions import FileIsNotMarkdown, ObjectNotFoundException
-
-if TYPE_CHECKING:
-    from md_translate.settings import Settings
+import os
 
 
-class FilesWorker:
-    def __init__(self, settings: 'Settings') -> None:
-        self.settings = settings
-        self.single_file: bool = False
-        self.object_to_process: Path = self.settings.path
-        self.__check_for_single_obj()
-        self.__validate_folder()
+class TraversalFun():
 
-    def __check_for_single_obj(self) -> None:
-        if self.object_to_process.is_file() and self.object_to_process.suffix == '.md':
-            self.single_file = True
-        elif self.object_to_process.is_file():
-            raise FileIsNotMarkdown(self.object_to_process)
+    def __init__(self, original_dir, dist_dir="") -> None:
+        self.original_dir = original_dir
+        self.dist_dir = dist_dir
+        self.md_files_list: list = []
 
-    def __validate_folder(self) -> None:
-        if not self.object_to_process.exists():
-            raise ObjectNotFoundException(self.object_to_process)
+    def traversal_dir(self) -> None:
 
-    def get_md_files(self) -> Iterable[Path]:
-        md_files_list: list = []
-        if self.single_file:
-            md_files_list.append(self.object_to_process)
+        dirs, filename = os.path.split(self.original_dir)
+        # print('dirs:', dirs)
+        # print('filename=', filename)
+
+        _dist_dir = ""
+        if self.dist_dir == "":
+            _dist_dir = os.path.abspath(os.path.join(
+                dirs, filename))
         else:
-            md_files_list.extend(
-                [
-                    link
-                    for link in self.object_to_process.iterdir()
-                    if link.suffix == '.md'
-                ]
-            )
-        if len(md_files_list) == 0:
-            raise FileNotFoundError('There are no MD files found with provided path!')
+            _dist_dir = self.dist_dir
 
-        return md_files_list
+        if not os.path.exists(_dist_dir):
+            os.makedirs(_dist_dir)
+
+        TraversalFun.all_files(self, self.original_dir, _dist_dir)
+
+    def all_files(self, original_dir, dist_dir='') -> None:
+
+        for lists in os.listdir(original_dir):
+            path:Path = os.path.abspath(os.path.join(original_dir, lists))
+            newpath:Path = os.path.abspath(os.path.join(dist_dir, lists))
+
+            if os.path.isfile(path):
+                # print('original path:', path)
+                # print('dist path:', newpath)
+
+                shutil.copy(path, newpath)
+                filename, file_extension = os.path.splitext(path)
+
+                if file_extension == '.mdx' or file_extension == '.md':
+                    ppath = Path(newpath)
+                    self.md_files_list.append(ppath)
+
+            if os.path.isdir(path):
+                # print('dist path:', newpath)
+                if not os.path.exists(newpath):
+                    os.mkdir(newpath)
+
+                TraversalFun.all_files(self, path, newpath)
+
+      

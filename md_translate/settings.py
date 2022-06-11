@@ -51,6 +51,10 @@ class Settings:
     def path(self) -> Path:
         return self.params.path
 
+    @property
+    def dist_path(self) -> Path:
+        return self.__get_property_by_name('dist_path')
+
     def __get_property_by_name(self, prop_name: str) -> str:
         property_value = getattr(self.params, prop_name, None) or self.config.get(
             prop_name
@@ -74,6 +78,14 @@ class Settings:
 
         arg_parser.add_argument(
             '-c', '--config_path', help='Path to config_file', type=Path
+        )
+
+        arg_parser.add_argument(
+            '-d',
+            '--dist_path',
+            help='Path to translated files. If not set, uses current sub folder of dist',
+            default=Path.cwd(),
+            type=Path
         )
 
         arg_parser.add_argument(
